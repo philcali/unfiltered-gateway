@@ -4,7 +4,7 @@ import collection.JavaConversions.{ mapAsScalaMap }
 import unfiltered.request.HttpRequest
 import unfiltered.response.HttpResponse
 
-import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, BufferedReader, InputStreamReader }
+import java.io.{ ByteArrayInputStream, BufferedReader, InputStreamReader }
 
 class RequestBinding(req: RequestObject) extends HttpRequest(req) {
   def context = req.getContext
@@ -37,19 +37,17 @@ class RequestBinding(req: RequestObject) extends HttpRequest(req) {
   }
 }
 
-class ResponseObject {
-  var status: Int = 200
-  var raw: Boolean = false
-  var redirect: Option[String] = None
-  val headers: collection.mutable.Map[String, String] = collection.mutable.Map.empty
-  val outputStream = new ByteArrayOutputStream()
+class ResponseBinding(resp: ResponseObject) extends HttpResponse(resp) {
+  def status = resp.getStatus()
+  def status(statusCode: Int) = resp.setStatus(statusCode)
+  def redirect(url: String) = {
+    resp.setStatus(304)
+    header("Location", url)
+  }
+  def header(name: String, value: String) = resp.getHeaders().put(name, value)
+  def outputStream = resp.getOutputStream()
+  def forward(raw: Boolean) = resp.setRaw(raw)
 }
 
-class ResponseBinding(resp: ResponseObject) extends HttpResponse(resp) {
-  def status = resp.status
-  def status(statusCode: Int) = resp.status = statusCode
-  def redirect(url: String) = resp.redirect = Some(url)
-  def header(name: String, value: String) = resp.headers += (name -> value)
-  def outputStream = resp.outputStream
-  def forward(raw: Boolean) = resp.raw = raw
-}
+case class InvalidResponseException(response: ResponseObject)
+  extends RuntimeException(s"${response.getStatus}: ${new String(response.getOutputStream.toByteArray())}")

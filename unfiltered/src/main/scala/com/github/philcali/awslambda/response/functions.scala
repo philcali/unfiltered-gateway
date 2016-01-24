@@ -5,6 +5,6 @@ import unfiltered.response.{ HttpResponse, Responder }
 
 object ForwardRaw extends Responder[ResponseObject] {
   def respond(res: HttpResponse[ResponseObject]) {
-    res.underlying.raw = true
+    res.underlying.setRaw(true)
   }
 }

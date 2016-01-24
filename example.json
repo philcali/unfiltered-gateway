@@ -1,0 +1,61 @@
+{
+  "name": "Example Api",
+  "description": "This is an example API built to use Unfiltered Gateway",
+  "artifacts": [{
+    "type": "lambda",
+    "definition": {
+      "name": "ExampleAPIFunction",
+      "role": "lambda_basic_execution",
+      "handler": "$input",
+      "file": "$input",
+      "s3": {
+        "bucket": "$input",
+        "prefix": "$input"
+      }
+    }
+  }],
+  "resources": [{
+    "path": "/"
+  }],
+  "models": [{
+    "name": "RequestObject",
+    "type": "application/json",
+    "description": "Basic Unfiltered Request Model",
+    "schema": {
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "title": "RequestObject",
+      "type": "object",
+      "properties": {
+        "method": { "type": "string" },
+        "resourcePath": { "type": "string" },
+        "charset": { "type": "string" },
+        "sourceIp": { "type": "string" },
+        "headerString": { "type": "string" },
+        "queryString": { "type": "string" },
+        "pathString": { "type": "string" },
+        "environmentString": { "type": "string" },
+        "headers": { "type": "object" },
+        "queryParams": { "type": "object" },
+        "pathParams": { "type": "object" },
+        "environment": { "type": "object" },
+        "body": { "type": "object" }
+      },
+      "required": [ "method", "resourcePath" ]
+    }
+  }, {
+    "name": "ResponseObject",
+    "type": "application/json",
+    "description": "Basic Unfiltered Response Model",
+    "schema":{
+      "$schema": "http://json-schema.org/draft-04/schema#",
+      "title": "ResponseObject",
+      "type": "object",
+      "properties": {
+        "status": { "type": "number" },
+        "headers": { "type": "object" },
+        "body": { "type": "object" }
+      },
+      "required": [ "status", "body" ]
+    }
+  }]
+}

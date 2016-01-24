@@ -54,6 +54,7 @@ trait InittedFunction extends RequestStreamHandler {
   }
   override def handleRequest(input: InputStream, output: OutputStream, context: Context) {
     withMapper(newMapper) { mapper =>
+      val response = defaultResponse
       val request = mapper.readValue(input, classOf[RequestObject])
       request.setContext(context)
       if (request.getBody().containsKey("value")) {
@@ -68,14 +69,19 @@ trait InittedFunction extends RequestStreamHandler {
         case (name, value) =>
         java.lang.System.setProperty("stageVariable." + name, value)
       })
-      val response = defaultResponse
       doPlan(request, response, defaulPlanChain)
-      if (response.raw) {
-        output.write(response.outputStream.toByteArray())
+      if (response.getStatus() < 400) {
+        if (response.isRaw()) {
+          output.write(response.getOutputStream().toByteArray())
+        } else {
+          mapper.writeValue(output, new MessageObject()
+            .withCode(response.getStatus())
+            .withHeaders(response.getHeaders())
+            .withBody(toBody(response.getOutputStream().toByteArray(), mapper)))
+        }
       } else {
-        mapper.writeValue(output, new MessageObject()
-          .withCode(response.status)
-          .withBody(toBody(response.outputStream.toByteArray(), mapper)))
+        // This needs to bubble up for proper gateway matching
+        throw InvalidResponseException(response)
       }
     }
   }

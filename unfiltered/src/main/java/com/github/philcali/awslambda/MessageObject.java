@@ -4,6 +4,7 @@ import java.util.Map;
 
 public class MessageObject {
     private int code;
+    private Map<String, String> headers;
     private Map<String, Object> body;
 
     public int getCode() {
@@ -16,6 +17,19 @@ public class MessageObject {
 
     public MessageObject withCode(int code) {
         setCode(code);
+        return this;
+    }
+
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
+    }
+
+    public MessageObject withHeaders(Map<String, String> headers) {
+        setHeaders(headers);
         return this;
     }
 

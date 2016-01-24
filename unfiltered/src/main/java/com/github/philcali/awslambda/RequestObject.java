@@ -91,6 +91,10 @@ public class RequestObject {
         return headers;
     }
 
+    public void setHeaders(Map<String, String> headers) {
+        this.headers = headers;
+    }
+
     public String getHeaderString() {
         return headerString;
     }
@@ -104,6 +108,10 @@ public class RequestObject {
             pathParams = splitString(pathString);
         }
         return pathParams;
+    }
+
+    public void setPathParams(Map<String, String> pathParams) {
+        this.pathParams = pathParams;
     }
 
     public String getPathString() {
@@ -121,6 +129,10 @@ public class RequestObject {
         return queryParams;
     }
 
+    public void setQueryParams(Map<String, String> queryParams) {
+        this.queryParams = queryParams;
+    }
+
     public String getQueryString() {
         return queryString;
     }
@@ -136,11 +148,15 @@ public class RequestObject {
         return environment;
     }
 
+    public void setEnvironment(Map<String, String> environment) {
+        this.environment = environment;
+    }
+
     public String getEnvironmentString() {
         return environmentString;
     }
 
-    public void setEnvironment(String environmentString) {
+    public void setEnvironmentString(String environmentString) {
         this.environmentString = environmentString;
     }
 

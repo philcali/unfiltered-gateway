@@ -42,3 +42,4 @@ MyApi.run(_.http(8080).run())
 ## TODO
 
 - Make a script to generate an API from DSL
+- Parse text file that defines specs it out

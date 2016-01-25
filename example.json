@@ -15,7 +15,42 @@
     }
   }],
   "resources": [{
-    "path": "/"
+    "path": "/",
+    "methods": [{
+      "method": "GET",
+      "request": {
+        "client": {
+          "models": {
+            "application/json": "RequestObject"
+          },
+          "parameters": {
+            "header": {
+              "X-Forwarded-For": false
+            }
+          }
+        },
+        "integration": {
+          "artifact": "ExampleAPIFunction",
+          "templates": {
+            "application/json": "$default"
+          }
+        }
+      },
+      "response": {
+        "200": {
+          "client": {
+            "models": {
+              "application/json": "Empty"
+            }
+          },
+          "integration": {
+            "templates": {
+              "application/json": "$default"
+            }
+          }
+        }
+      }
+    }]
   }],
   "models": [{
     "name": "RequestObject",

@@ -44,12 +44,53 @@ package object models {
   implicit def ResourceDefinitionJson: DecodeJson[ResourceMethods] =
     DecodeJson(resource => for {
       name <- (resource --\ "path").as[String]
+      methods <- (resource --\ "methods").as[List[ResourceMethod]]
       resources <- (resource --\ "resources").as[Option[List[ResourceMethods]]]
-      methods <- (resource --\ "methods").as[Option[List[ResourceMethod]]]
-    } yield (ResourceDefinition(name, methods.getOrElse(Nil), resources.getOrElse(Nil))))
+    } yield (ResourceDefinition(name, methods, resources.getOrElse(Nil))))
 
   implicit def ResourceMethodJson: DecodeJson[ResourceMethod] =
     DecodeJson(method => for {
       name <- (method --\ "method").as[String]
-    } yield (ResourceMethod(name)))
+      request <- (method --\ "request").as[MethodRequest]
+      response <- (method --\ "response").as[Map[String, MethodResponse]]
+    } yield (ResourceMethod(name, request, response)))
+
+  implicit def MethodRequestJson: DecodeJson[MethodRequest] =
+    DecodeJson(request => for {
+      client <- (request --\ "client").as[ClientRequest]
+      integration <- (request --\ "integration").as[IntegrationRequest]
+    } yield (MethodRequest(client, integration)))
+
+  implicit def MethodResponseJson: DecodeJson[MethodResponse] =
+    DecodeJson(response => for {
+      client <- (response --\ "client").as[ClientResponse]
+      integration <- (response --\ "integration").as[IntegrationResponse]
+    } yield (MethodResponse(client, integration)))
+
+  implicit def ClientRequestJson: DecodeJson[ClientRequest] =
+    DecodeJson(request => for {
+      models <- (request --\ "models").as[Map[String, String]]
+      parameters <- (request --\ "parameters").as[Option[Map[String, Map[String, Boolean]]]]
+    } yield (ClientRequest(models, parameters.getOrElse(Map.empty))))
+
+  implicit def IntegrationRequestJson: DecodeJson[IntegrationRequest] =
+    DecodeJson(request => for {
+      templates <- (request --\ "templates").as[Map[String, String]]
+      parameters <- (request --\ "parameters").as[Option[Map[String, Map[String, String]]]]
+      region <- (request --\ "region").as[Option[String]]
+      artifact <- (request --\ "artifact").as[Option[String]]
+    } yield (IntegrationRequest(templates, region.getOrElse("us-east-1"), parameters.getOrElse(Map.empty), artifact)))
+
+  implicit def ClientResponseJson: DecodeJson[ClientResponse] =
+    DecodeJson(response => for {
+      models <- (response --\ "models").as[Map[String, String]]
+      parameters <- (response --\ "parameters").as[Option[Map[String, Map[String, Boolean]]]]
+    } yield (ClientResponse(models, parameters.getOrElse(Map.empty))))
+
+  implicit def IntegrationResponseJson: DecodeJson[IntegrationResponse] =
+    DecodeJson(response => for {
+      selection <- (response --\ "selection").as[Option[String]]
+      templates <-(response --\ "templates").as[Map[String, String]]
+      parameters <- (response --\ "parameters").as[Option[Map[String, Map[String, String]]]]
+    } yield (IntegrationResponse(selection.getOrElse(""), templates, parameters.getOrElse(Map.empty))))
 }

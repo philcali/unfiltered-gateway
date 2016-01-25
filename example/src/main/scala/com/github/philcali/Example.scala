@@ -12,6 +12,9 @@ object Example {
   import unfiltered.directives._, Directives._
 
   def intent = Directive.Intent.Path {
-    case "/" => for (_ <- GET) yield (ResponseString("Hello World!"))
+    case "/" =>
+      for {
+        _ <- GET
+      } yield (ResponseString("""{"message":"Hello World!"}"""))
   }
 }

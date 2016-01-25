@@ -8,6 +8,7 @@ import util.Try
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.{ Files, Paths, StandardOpenOption }
+import java.util.Collections
 
 import com.amazonaws.services.apigateway.AmazonApiGateway
 import com.amazonaws.services.apigateway.AmazonApiGatewayClient
@@ -29,17 +30,102 @@ case class DefaultApiConverter(input: ConversionInput) extends RestConverter {
   val s3Client = new AmazonS3Client()
 }
 
+
 trait ResourceConverter {
   self: ModelConverter with ArtifactConverter =>
 
+  def updateMethod(api: Api, resource: Resource, method: ResourceMethod)(implicit definitions: Map[String, ArtifactDefinition]) = resource.getResourceMethods().containsKey(method.method) match {
+    case true =>
+    case false =>
+    val putMethod = new PutMethodRequest()
+      .withRestApiId(api.id.get)
+      .withResourceId(resource.getId())
+      .withHttpMethod(method.method)
+      .withAuthorizationType("NONE")
+      .withApiKeyRequired(false)
+    method.request.client.models.foreach({
+      case (contentType, modelName) =>
+      putMethod.addRequestModelsEntry(contentType, modelName)
+    })
+    method.request.client.parameters.foreach({
+      case (location, params) =>
+      params.foreach({
+        case (name, value) =>
+        putMethod.addRequestParametersEntry(s"method.request.${location}.${name}", value)
+      })
+    })
+    apiClient.putMethod(putMethod)
+    val putIntegration = new PutIntegrationRequest()
+      .withRestApiId(api.id.get)
+      .withResourceId(resource.getId())
+      .withHttpMethod(method.method)
+      .withIntegrationHttpMethod(method.method)
+    method.request.integration.templates.foreach({
+      case (contentType, template) =>
+      putIntegration.addRequestTemplatesEntry(contentType, method.request.integration.template(contentType))
+    })
+    method.request.integration.parameters.foreach({
+      case (location, params) =>
+      params.foreach({
+        case (name, value) =>
+        putIntegration.addRequestParametersEntry(s"integration.request.${location}.${name}", value)
+      })
+    })
+    method.request.integration.artifact.foreach({
+      case artifact =>
+      putIntegration
+        .withType(IntegrationType.AWS)
+        .withUri(method.request.integration.uri(definitions(artifact).id.get))
+    })
+    apiClient.putIntegration(putIntegration)
+    method.response.foreach({
+      case (code, response) =>
+      val putMethodResponse = new PutMethodResponseRequest()
+        .withRestApiId(api.id.get)
+        .withResourceId(resource.getId())
+        .withHttpMethod(method.method)
+        .withStatusCode(code)
+      response.client.parameters.foreach({
+        case (location, params) =>
+        params.foreach({
+          case (name, value) =>
+          putMethodResponse.addResponseParametersEntry(s"method.response.${location}.${name}", value)
+        })
+      })
+      response.client.models.foreach({
+        case (contentType, model) =>
+        putMethodResponse.addResponseModelsEntry(contentType, model)
+      })
+      apiClient.putMethodResponse(putMethodResponse)
+      val putIntegrationResponse = new PutIntegrationResponseRequest()
+        .withRestApiId(api.id.get)
+        .withResourceId(resource.getId())
+        .withHttpMethod(method.method)
+        .withStatusCode(code)
+      response.integration.parameters.foreach({
+        case (location, params) =>
+        params.foreach({
+          case (name, value) =>
+          putIntegrationResponse.addResponseParametersEntry(s"integration.response.${location}.${name}", value)
+        })
+      })
+      putIntegrationResponse.withSelectionPattern(response.integration.selection)
+      response.integration.templates.foreach({
+        case (contentType, template) =>
+        putIntegrationResponse.addResponseTemplatesEntry(contentType, response.integration.template(contentType))
+      })
+      apiClient.putIntegrationResponse(putIntegrationResponse)
+    })
+  }
+
   def updateResources(api: Api) = {
-    val definitions = updateArtifacts(api)
+    implicit val definitions = updateArtifacts(api)
     val resources = apiClient.getResources(new GetResourcesRequest().withRestApiId(api.id.get)).getItems.map({
       case resource => resource.getPath() -> resource
     }).toMap
     def update(resource: ResourceMethods, parent: Option[Resource] = None) {
       val restResource = resources
-        .get(parent.foldRight(resource.name)(_.getPath() + "/" + _))
+        .get(parent.foldRight(resource.name)(_.getPath().stripSuffix("/") + "/" + _))
         .orElse({
           val request = new CreateResourceRequest().withPathPart(resource.name)
           api.id.foreach(request.withRestApiId)
@@ -55,7 +141,14 @@ trait ResourceConverter {
             })
             .toOption
         })
-        resource.resources.map(update(_, restResource))
+        .map(r =>{
+          if (r.getResourceMethods() == null) {
+            r.withResourceMethods(Collections.emptyMap())
+          }
+          r
+        })
+      resource.methods.foreach(updateMethod(api, restResource.get, _))
+      resource.resources.foreach(update(_, restResource))
     }
     api.resources.map(update(_, None))
   }
@@ -240,7 +333,7 @@ class DirectConversionInput(args: String*) extends ConversionInput {
     case arg if arg contains "=" => arg.replaceAll("^-*", "").split("=") match {
       case Array(key, value) => key -> value
     }
-    case arg if arg startsWith "-" => arg -> "true"
+    case arg if arg startsWith "-" => arg.replaceAll("^-*", "") -> "true"
     case arg => "source" -> arg
   }):_*)
   lazy val mainClass = argMap.get("mainClass")
